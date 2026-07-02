@@ -1,91 +1,78 @@
 import { createContext, useState } from "react";
-import run from "../config/geminiapi";
+import run, { resetChat, loadChatHistory } from "../config/geminiapi";
 
-export const Context=createContext();
+export const Context = createContext();
+
 const ContextProvider = (props) => {
- const[Input , setInput]=useState("");
-const[recentPrompt ,setRecentPrompt] =useState("");
-const[prev , setprevprompt]=useState([]);
-const[showResult,setShowResult]=useState(false);
-const[loading,setloading]=useState(false);
-const[resultData,setresultData]=useState("");
-const delaypara=(index,nextWord)=>{
-setTimeout(function () {
-setresultData(prev=>prev+nextWord);
+  const [Input, setInput] = useState("");
+  const [messages, setMessages] = useState([]);
+  const [chatHistory, setChatHistory] = useState([]);
+  const [showResult, setShowResult] = useState(false);
+  const [loading, setloading] = useState(false);
 
-},75*index)
-}
-const newChat=() =>
-{
-   setloading(false)
-   setShowResult(false)
-}
- 
- const onSet=async(prompt)=>{
-    setresultData("")
-    setloading(true)
-    setShowResult(true)
-    let response;
-    if(prompt !==undefined)
-    {
-      response = await run(prompt);
-      setRecentPrompt(prompt)
-
+  const newChat = () => {
+    if (messages.length > 0) {
+      setChatHistory((prev) => [
+        ...prev,
+        { title: messages[0].text, messages: [...messages] },
+      ]);
     }
-    else{
-      setprevprompt(prev=>[...prev,input])
-      setRecentPrompt(input)
-      response=await run(input)
+    resetChat();
+    setMessages([]);
+    setloading(false);
+    setShowResult(false);
+  };
 
+  const loadChat = (index) => {
+    const chat = chatHistory[index];
+    if (!chat) return;
+    loadChatHistory(chat.messages);
+    setMessages(chat.messages);
+    setShowResult(true);
+    setloading(false);
+  };
+
+  const onSet = async () => {
+    const userPrompt = Input.trim();
+    if (!userPrompt) return;
+
+    const userMessage = { role: "user", text: userPrompt };
+    setMessages((prev) => [...prev, userMessage]);
+    setloading(true);
+    setShowResult(true);
+
+    try {
+      const response = await run(userPrompt);
+      setMessages((prev) => [...prev, { role: "model", text: response }]);
+    } catch (error) {
+      const errorText =
+        error.message || "Something went wrong. Please try again.";
+      setMessages((prev) => [...prev, { role: "model", text: errorText }]);
+    } finally {
+      setloading(false);
+      setInput("");
     }
-    
-    
-    let responseArray=response.split("**")
-    let newArray=""
-    for(i=0 ; i<responseArray.length;i++)
-    {
-      if(i===0 || i%2 !==1)
-      {
-         newArray+=responseArray[i]
-      }
-      else{
-         newArray+="<b>"+responseArray[i]+"</b>"
-      }
-    }
-    let newArray2=newArray.split("*").join("</br>")
-    let newArrayResponse=newArray2.split(" ")
-    for(i=0;i<newArrayResponse.length;i++){
-      const nextWord=newArrayResponse[i];
-      delaypara(i,nextWord+" ")
-    }
-    setresultData(newArray2)
-    setloading(false)
-    setInput( "")
- }
+  };
 
-    const contextValue={ 
-        Input ,
-         setInput,
-         recentPrompt ,
-         setRecentPrompt,
-         prev , 
-         setprevprompt,
-         showResult,
-         setShowResult,
-         loading,
-         setloading,
-         resultData,
-         setresultData,
-         onSet,
-         newChat
+  const contextValue = {
+    Input,
+    setInput,
+    messages,
+    chatHistory,
+    showResult,
+    setShowResult,
+    loading,
+    setloading,
+    onSet,
+    loadChat,
+    newChat,
+  };
 
-
-
-    }
- return (
+  return (
     <Context.Provider value={contextValue}>
-        {props.children}
+      {props.children}
     </Context.Provider>
- )
-}
+  );
+};
+
 export default ContextProvider;

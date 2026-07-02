@@ -1,10 +1,11 @@
 import React, { useContext } from 'react'
+import ReactMarkdown from 'react-markdown'
 import './Main.css'
 import { assets } from '../../assets/assets'
 import { Context } from '../../context/Context'
 
 const Main = () => {
-    const{onSet,recentPrompt,showResult,loading,resultData,setInput,Input ,setresultData, setloading, setShowResult }=useContext(Context);
+    const { onSet, messages, showResult, loading, setInput, Input } = useContext(Context);
   return (
     <div className="main">
         <div className="nav">
@@ -54,29 +55,28 @@ Improve the readability of the following code
             </div>
             </> :
             <div className='result'>
-                <div className="result-title">
-                    <img src={assets.user_icon} alt=""></img>
-
-                    <p>{recentPrompt}</p>
-
-                </div>
-                <div className='result-data'>
-                <img src={assets.gemini_icon} alt=""/>
-                  
-                    {loading?
-                    <div className='loader'>
-                        <hr/>
-                        <hr/>
-                        <hr/>
-                    </div>:
-<p dangerouslySetInnerHTML={{__html:resultData}}>
-                      </p>
-
-                }
-                    
-
-                </div>
-
+                {messages.map((msg, index) => (
+                    <div key={index} className={msg.role === "user" ? "result-title" : "result-data"}>
+                        <img src={msg.role === "user" ? assets.user_icon : assets.gemini_icon} alt="" />
+                        {msg.role === "model" ? (
+                            <div className="response-text markdown-content">
+                                <ReactMarkdown>{msg.text}</ReactMarkdown>
+                            </div>
+                        ) : (
+                            <p>{msg.text}</p>
+                        )}
+                    </div>
+                ))}
+                {loading && (
+                    <div className='result-data'>
+                        <img src={assets.gemini_icon} alt=""/>
+                        <div className='loader'>
+                            <hr/>
+                            <hr/>
+                            <hr/>
+                        </div>
+                    </div>
+                )}
             </div>
 }
             
